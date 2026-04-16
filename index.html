@@ -522,7 +522,7 @@ function updateSheetStatus(ok){
 function callGemini(message){
   return new Promise(function(resolve, reject){
     if (!PROXY_URL){ reject("NO_PROXY"); return; }
-    fetch(PROXY_URL, {
+    fetch("https://anubis-proxy.romysingh84821.workers.dev/", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({

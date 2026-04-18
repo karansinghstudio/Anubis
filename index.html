@@ -339,7 +339,7 @@ input,textarea,select{font-family:inherit}
       </div>
     </nav>
     <div class="sft">
-      <div class="sh-ind" id="shInd"><i class="fas fa-circle"></i><span>Sheet: Checking...</span></div>
+      <div class="sh-ind" id="shInd"><i class="fas fa-circle"></i><span>Worker: Checking...</span></div>
       <button class="sf" id="expB"><i class="fas fa-compass"></i><span>Explore</span></button>
       <button class="sf" id="setB"><i class="fas fa-gear"></i><span>Settings</span></button>
       <div class="ttr">
@@ -364,9 +364,9 @@ input,textarea,select{font-family:inherit}
           <i class="fas fa-chevron-down ar"></i>
         </button>
         <div class="ms-d" id="mD">
-          <div class="mo act" data-m="Anubis Pro 4.6" data-v="gemini-2.5-flash"><span class="mo-n">Anubis Pro 4.6</span><span class="mo-b">Active</span></div>
-          <div class="mo" data-m="Anubis Pro Ultra" data-v="gemini-2.5-pro"><span class="mo-n">Anubis Pro Ultra</span><span class="mo-b">Powerful</span></div>
-          <div class="mo" data-m="Anubis Flash 2.5" data-v="gemini-2.0-flash"><span class="mo-n">Anubis Flash 2.5</span><span class="mo-b">Fast</span></div>
+          <div class="mo act" data-m="Anubis Pro 4.6" data-v="anubis-pro-4.6"><span class="mo-n">Anubis Pro 4.6</span><span class="mo-b">Active</span></div>
+          <div class="mo" data-m="Anubis Pro Ultra" data-v="anubis-pro-ultra"><span class="mo-n">Anubis Pro Ultra</span><span class="mo-b">Powerful</span></div>
+          <div class="mo" data-m="Anubis Flash 2.5" data-v="anubis-flash-2.5"><span class="mo-n">Anubis Flash 2.5</span><span class="mo-b">Fast</span></div>
         </div>
       </div>
       <div class="ta"><button class="ta-b" title="Share" id="shB"><i class="fas fa-share-nodes"></i></button></div>
@@ -405,19 +405,19 @@ input,textarea,select{font-family:inherit}
   <div class="card" style="max-width:440px"><div class="card2">
     <p class="hdging" style="margin-bottom:20px">Settings</p>
     <div class="st-sec">
-      <label class="st-lbl">Proxy URL (Cloudflare Worker)</label>
+      <label class="st-lbl">Worker URL (Cloudflare Gateway)</label>
       <div class="fld">
         <svg viewBox="0 0 16 16" fill="currentColor" height="16" width="16" xmlns="http://www.w3.org/2000/svg" class="fi"><path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1.002 1.002 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4.018 4.018 0 0 1-.128-1.287z"></path><path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"></path></svg>
         <input type="url" class="ifld" id="pxIn" placeholder="https://your-worker.workers.dev">
       </div>
-      <p class="st-hint">API key stays on the server. Browser never sees it.</p>
+      <p class="st-hint">OpenRouter + Gemini keys stay on Worker. Browser never sees them.</p>
     </div>
     <div class="st-sec">
       <label class="st-lbl">AI Model</label>
       <select class="st-sel" id="modSel">
-        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Anubis Pro 4.6)</option>
-        <option value="gemini-2.5-pro">Gemini 2.5 Pro (Anubis Pro Ultra)</option>
-        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Anubis Flash 2.5)</option>
+        <option value="anubis-pro-4.6">Anubis Pro 4.6 (Auto-Route)</option>
+        <option value="anubis-pro-ultra">Anubis Pro Ultra (Auto-Route)</option>
+        <option value="anubis-flash-2.5">Anubis Flash 2.5 (Fast-Route)</option>
       </select>
     </div>
     <div class="st-sec">
@@ -434,39 +434,75 @@ input,textarea,select{font-family:inherit}
 <div class="tst" id="tst"></div>
 
 <script>
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 1 — CONFIG: Zero API keys in frontend.
+   OpenRouter = PRIMARY, Gemini = SECONDARY fallback.
+   Worker.dev handles all key storage, routing, and fallback logic.
+   ═══════════════════════════════════════════════════════════════════ */
 var CONFIG = {
-  SHEETS_KEY: "",
-  SHEET_ID:   "",
-  MODEL:      "gemini-2.5-flash",
-  SYSTEM:     "You are Anubis AI, a helpful assistant. Respond in clean Markdown. Use tables, code blocks, lists where appropriate. If given sheet data, answer ONLY from that data. Respond in the same language the user uses (Hindi / English / Hinglish)."
+  PROVIDER_PRIORITY: ["openrouter", "gemini"],
+  MODEL: "anubis-pro-4.6",
+  SYSTEM: "You are Anubis AI, a helpful assistant powered by Cloudflare Workers. OpenRouter is your primary AI provider with Gemini as fallback. Respond in clean Markdown. Use tables, code blocks, lists where appropriate. If given sheet data, answer ONLY from that data. Respond in the same language the user uses (Hindi / English / Hinglish)."
 };
 
-var PROXY_URL   = "";
-var TOKEN_LIMIT = 100000;
-var TOKEN_USED  = 0;
-var isDark      = true;
-var typing      = false;
-var curChat     = "welcome";
-var hist        = { welcome: [] };
-var userName    = "Karan";
+/* Backward compatibility: migrate old Gemini model IDs to provider-agnostic IDs */
+var MODEL_MIGRATION = {
+  "gemini-2.5-flash": "anubis-pro-4.6",
+  "gemini-2.5-pro": "anubis-pro-ultra",
+  "gemini-2.0-flash": "anubis-flash-2.5"
+};
 
-function $(id){ return document.getElementById(id); }
-function $$(s){ return document.querySelectorAll(s); }
+var MODEL_NAMES = {
+  "anubis-pro-4.6": "Anubis Pro 4.6",
+  "anubis-pro-ultra": "Anubis Pro Ultra",
+  "anubis-flash-2.5": "Anubis Flash 2.5"
+};
+
+var MODEL_TAGS = {
+  "anubis-pro-4.6": "",
+  "anubis-pro-ultra": "Powerful",
+  "anubis-flash-2.5": "Fast"
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════════ */
+var PROXY_URL = "";
+var WORKER_ONLINE = false;
+var TOKEN_LIMIT = 100000;
+var TOKEN_USED = 0;
+var isDark = true;
+var typing = false;
+var curChat = "welcome";
+var hist = { welcome: [] };
+var userName = "Karan";
+
+/* ═══════════════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════════════ */
+function $(id) { return document.getElementById(id); }
+function $$(s) { return document.querySelectorAll(s); }
 
 if (typeof marked !== "undefined") {
   marked.use({ breaks: true, gfm: true });
 }
 
-var BLOCKED = ["password","aadhaar","aadhar","pan number","pan card","bank account","credit card","cvv","social security","ssn","passport number","otp","upi pin","salary slip","salary details","income tax","login credentials","secret key","private key"];
-function isBlocked(t){
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 6 — SECURITY: Sensitive info detection
+   ═══════════════════════════════════════════════════════════════════ */
+var BLOCKED = ["password","aadhaar","aadhar","pan number","pan card","bank account","credit card","cvv","social security","ssn","passport number","otp","upi pin","salary slip","salary details","income tax","login credentials","secret key","private key","api key","apikey","openrouter key","gemini key"];
+function isBlocked(t) {
   var l = t.toLowerCase();
   for (var i = 0; i < BLOCKED.length; i++) { if (l.indexOf(BLOCKED[i]) !== -1) return true; }
   return false;
 }
-var BLOCK_MSG = "I can't help with sensitive information like passwords, financial details, or personal identification numbers.";
+var BLOCK_MSG = "I can't help with sensitive information like passwords, API keys, financial details, or personal identification numbers. This is handled securely on the server.";
 
+/* ═══════════════════════════════════════════════════════════════════
+   SHEET TRIGGER WORDS — to route through /api/sheet
+   ═══════════════════════════════════════════════════════════════════ */
 var TRIGGERS = ["sheet","spreadsheet","my data","table data","report","status","pending","task","work","assigned","progress","record","entry","employee","team member","how many","count","total","meenakshi","sandeep","rahul","priya","kaam","kaarya","jankari","kitne","kiska","kisne","batao","complete","shesh","baaki","taim"];
-function needsSheet(t){
+function needsSheet(t) {
   var l = t.toLowerCase();
   for (var i = 0; i < TRIGGERS.length; i++) { if (l.indexOf(TRIGGERS[i]) !== -1) return true; }
   return false;
@@ -474,140 +510,212 @@ function needsSheet(t){
 
 var sheetCache = { data: null, time: 0, ttl: 120000 };
 
-function readSheet(){
-  return new Promise(function(resolve){
-    if (sheetCache.data && Date.now() - sheetCache.time < sheetCache.ttl){ resolve(sheetCache.data); return; }
-    if (!CONFIG.SHEET_ID || !CONFIG.SHEETS_KEY){ resolve(null); return; }
-    fetch("https://sheets.googleapis.com/v4/spreadsheets/" + CONFIG.SHEET_ID + "?key=" + CONFIG.SHEETS_KEY)
-      .then(function(r){ return r.json(); })
-      .then(function(meta){
-        var names = [];
-        if (meta.sheets){ for (var i = 0; i < meta.sheets.length; i++){ names.push(meta.sheets[i].properties.title); } }
-        if (!names.length){ resolve(null); return; }
-        Promise.all(names.map(function(name){
-          return fetch("https://sheets.googleapis.com/v4/spreadsheets/" + CONFIG.SHEET_ID + "/values/" + encodeURIComponent(name) + "?key=" + CONFIG.SHEETS_KEY)
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-              var vals = d.values || [];
-              if (!vals.length) return "### " + name + "\n(Empty)";
-              var maxC = 0;
-              for (var i = 0; i < vals.length; i++){ if (vals[i].length > maxC) maxC = vals[i].length; }
-              var rows = [];
-              for (var i = 0; i < vals.length; i++){
-                var row = vals[i].slice();
-                while (row.length < maxC) row.push("");
-                rows.push(row.join(" | "));
-              }
-              rows.splice(1, 0, Array(maxC).fill("---").join(" | "));
-              return "### " + name + "\n\n" + rows.join("\n");
-            })
-            .catch(function(){ return "### " + name + "\n(Error reading)"; });
-        })).then(function(results){
-          sheetCache.data = results.join("\n\n---\n\n");
-          sheetCache.time = Date.now();
-          updateSheetStatus(true);
-          resolve(sheetCache.data);
-        });
-      })
-      .catch(function(){ updateSheetStatus(false); resolve(null); });
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 2 — WORKER URL: Smart auto-detection
+   .workers.dev / .pages.dev → same origin (Worker serves this file)
+   Otherwise → use manually set PROXY_URL from Settings
+   ═══════════════════════════════════════════════════════════════════ */
+function getWorkerURL() {
+  var host = window.location.hostname;
+  if (host.endsWith(".workers.dev") || host.endsWith(".pages.dev")) {
+    return window.location.origin;
+  }
+  if (PROXY_URL) return PROXY_URL;
+  return "";
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WORKER STATUS — Updates sidebar indicator
+   Shows: active provider (OpenRouter/Gemini) + Telegram bot status
+   ═══════════════════════════════════════════════════════════════════ */
+function updateWorkerStatus(data) {
+  var el = $("shInd");
+  if (!el) return;
+  if (!data) {
+    WORKER_ONLINE = false;
+    el.className = "sh-ind err";
+    el.innerHTML = '<i class="fas fa-circle"></i><span>Worker: Not set</span>';
+  } else if (data.error || !data.status) {
+    WORKER_ONLINE = false;
+    el.className = "sh-ind err";
+    el.innerHTML = '<i class="fas fa-circle"></i><span>Worker: Offline</span>';
+  } else {
+    WORKER_ONLINE = true;
+    var p = (data.active_provider || "ready");
+    p = p.charAt(0).toUpperCase() + p.slice(1);
+    var tg = "";
+    if (data.telegram) {
+      tg = data.telegram.connected ? " | TG: Live" : " | TG: Off";
+    }
+    el.className = "sh-ind ok";
+    el.innerHTML = '<i class="fas fa-circle"></i><span>Worker: ' + p + tg + '</span>';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 3 — SHEET DATA: Routed through Worker (NEVER direct Google API)
+   Worker endpoint: GET /api/sheet
+   Worker holds SHEET_ID + SHEETS_API_KEY as secrets
+   ═══════════════════════════════════════════════════════════════════ */
+function readSheet() {
+  return new Promise(function(resolve) {
+    if (sheetCache.data && Date.now() - sheetCache.time < sheetCache.ttl) {
+      resolve(sheetCache.data);
+      return;
+    }
+    var url = getWorkerURL();
+    if (!url) { resolve(null); return; }
+    fetch(url + "/api/sheet", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    })
+    .then(function(r) { if (!r.ok) { resolve(null); return; } return r.json(); })
+    .then(function(d) {
+      if (!d || !d.data) { resolve(null); return; }
+      sheetCache.data = d.data;
+      sheetCache.time = Date.now();
+      resolve(sheetCache.data);
+    })
+    .catch(function() { resolve(null); });
   });
 }
 
-function updateSheetStatus(ok){
-  var el = $("shInd");
-  if (ok){ el.className = "sh-ind ok"; el.innerHTML = '<i class="fas fa-circle"></i><span>Sheet: Connected</span>'; }
-  else   { el.className = "sh-ind err"; el.innerHTML = '<i class="fas fa-circle"></i><span>Sheet: Disconnected</span>'; }
-}
-
-function callGemini(message){
-  return new Promise(function(resolve, reject){
-    if (!PROXY_URL){ reject("NO_PROXY"); return; }
-    fetch("https://anubis-proxy.romysingh84821.workers.dev/", {
-      method:  "POST",
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 2 — AI CALL: Routed through Worker
+   OpenRouter FIRST → Gemini SECOND (Worker handles fallback)
+   Worker endpoint: POST /api/chat
+   Worker holds OPENROUTER_KEY + GEMINI_KEY as secrets
+   Frontend ONLY sends: message, model, system, history, priority
+   ═══════════════════════════════════════════════════════════════════ */
+function callAI(message, history) {
+  return new Promise(function(resolve, reject) {
+    var url = getWorkerURL();
+    if (!url) { reject("NO_WORKER"); return; }
+    var body = {
+      message: message,
+      model: CONFIG.MODEL,
+      system: CONFIG.SYSTEM,
+      provider_priority: CONFIG.PROVIDER_PRIORITY
+    };
+    if (history && history.length > 0) {
+      body.history = history.slice(-20);
+    }
+    fetch(url + "/api/chat", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
-        model:             CONFIG.MODEL,
-        contents:          [{ parts: [{ text: message }] }],
-        system_instruction: CONFIG.SYSTEM,
-        generationConfig:  { maxOutputTokens: 8192, temperature: 0.7 }
-      })
+      body: JSON.stringify(body)
     })
-    .then(function(r){
-      if (r.status === 429)   return reject("QUOTA");
-      if (r.status === 403)   return reject("KEY");
-      if (r.status === 404)   return reject("MODEL");
-      if (!r.ok)              return reject("ERR:" + r.status);
+    .then(function(r) {
+      if (r.status === 429) return reject("QUOTA");
+      if (r.status === 403) return reject("KEY");
+      if (r.status === 404) return reject("MODEL");
+      if (r.status === 502) return reject("UPSTREAM");
+      if (!r.ok) return reject("ERR:" + r.status);
       return r.json();
     })
-    .then(function(d){
+    .then(function(d) {
       if (!d) return;
-      if (d.error){ reject("ERR:" + (d.error.message || d.error)); return; }
-      var text = d.text;
-      if (d.usage){ TOKEN_USED += (d.usage.total_tokens || 0); updateTokens(); }
+      if (d.error) {
+        reject("ERR:" + (d.error.message || JSON.stringify(d.error)));
+        return;
+      }
+      var text = d.text || d.response || "";
+      if (d.usage) {
+        var total = d.usage.total_tokens || 0;
+        if (!total && d.usage.prompt_tokens && d.usage.completion_tokens) {
+          total = d.usage.prompt_tokens + d.usage.completion_tokens;
+        }
+        TOKEN_USED += total;
+        updateTokens();
+      }
+      if (d.provider) {
+        updateWorkerStatus({ status: "ok", active_provider: d.provider, telegram: null });
+      }
       if (!text || text.length < 1) reject("SHORT");
       else resolve(text);
     })
-    .catch(function(e){ reject(typeof e === "string" ? e : "NET"); });
+    .catch(function(e) { reject(typeof e === "string" ? e : "NET"); });
   });
 }
 
-function getAI(userText){
+/* ═══════════════════════════════════════════════════════════════════
+   AI GATEWAY — Entry point: blocked check → sheet check → Worker call
+   ═══════════════════════════════════════════════════════════════════ */
+function getAI(userText, history) {
   if (isBlocked(userText)) return Promise.resolve(BLOCK_MSG);
-  if (needsSheet(userText)){
-    return readSheet().then(function(sd){
-      if (sd) return callGemini(
-        "You have access to this Google Sheet data:\n\n=== SHEET DATA START ===\n" + sd +
-        "\n=== SHEET DATA END ===\n\nUser Question: " + userText +
-        "\n\nAnswer based ONLY on the sheet data. Be specific with exact values. Use markdown tables if helpful."
-      );
-      return callGemini(userText);
+  if (needsSheet(userText)) {
+    return readSheet().then(function(sd) {
+      if (sd) {
+        var prompt = "You have access to this Google Sheet data:\n\n=== SHEET DATA START ===\n" + sd +
+          "\n=== SHEET DATA END ===\n\nUser Question: " + userText +
+          "\n\nAnswer based ONLY on the sheet data. Be specific with exact values. Use markdown tables if helpful.";
+        return callAI(prompt, history);
+      }
+      return callAI(userText, history);
     });
   }
-  return callGemini(userText);
+  return callAI(userText, history);
 }
 
-function updateTokens(){
+/* ═══════════════════════════════════════════════════════════════════
+   TOKEN TRACKING
+   ═══════════════════════════════════════════════════════════════════ */
+function updateTokens() {
   var uEl = $("tkUsed"), lEl = $("tkLeft");
   if (uEl) uEl.querySelector(".sv").textContent = TOKEN_USED.toLocaleString();
-  if (lEl){
+  if (lEl) {
     var rem = TOKEN_LIMIT - TOKEN_USED;
     lEl.querySelector(".sv").textContent = rem > 0 ? rem.toLocaleString() : "0";
     lEl.className = "st-stat" + (rem <= 0 ? " danger" : rem < TOKEN_LIMIT * 0.1 ? " warn" : "");
   }
 }
 
-function setTheme(dark){
+/* ═══════════════════════════════════════════════════════════════════
+   THEME
+   ═══════════════════════════════════════════════════════════════════ */
+function setTheme(dark) {
   isDark = dark;
   document.body.classList.toggle("lt", !dark);
   $("ltT").checked = !dark;
   $("sbT").checked = !dark;
   $("tIc").className = dark ? "fas fa-moon" : "fas fa-sun";
-  try { localStorage.setItem("ab-th", dark ? "d" : "l"); } catch(e){}
+  try { localStorage.setItem("ab-th", dark ? "d" : "l"); } catch(e) {}
 }
 
-function enterApp(name){
+/* ═══════════════════════════════════════════════════════════════════
+   APP ENTRY — After login
+   ═══════════════════════════════════════════════════════════════════ */
+function enterApp(name) {
   userName = name;
-  var uaEls = $$(".ua"); uaEls.forEach(function(e){ e.textContent = name.charAt(0).toUpperCase(); });
-  var unEls = $$(".un"); unEls.forEach(function(e){ e.textContent = name; });
+  $$(".ua").forEach(function(e) { e.textContent = name.charAt(0).toUpperCase(); });
+  $$(".un").forEach(function(e) { e.textContent = name; });
   var h = new Date().getHours(), g = "Hello";
-  if (h >= 5  && h < 12) g = "Good morning";
+  if (h >= 5 && h < 12) g = "Good morning";
   else if (h >= 12 && h < 17) g = "Good afternoon";
   else if (h >= 17 && h < 21) g = "Good evening";
   else g = "Hello, night owl";
   $("gT").textContent = g + ", " + name;
   $("lo").classList.add("hid");
-  setTimeout(function(){
+  setTimeout(function() {
     $("ma").classList.add("on");
     $("mi").focus();
-    checkSheet();
-    if (!PROXY_URL) setTimeout(function(){ toast("Set your proxy URL in Settings to start chatting"); }, 600);
+    checkWorkerHealth();
+    if (!getWorkerURL()) {
+      setTimeout(function() { toast("Set your Worker URL in Settings to start chatting"); }, 600);
+    }
   }, 300);
 }
 
-function openMobileSidebar(){ $("sb").classList.add("mop"); $("sov").classList.add("on"); }
-function closeMobileSidebar(){ $("sb").classList.remove("mop"); $("sov").classList.remove("on"); }
+/* ═══════════════════════════════════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════════════════════════════════ */
+function openMobileSidebar() { $("sb").classList.add("mop"); $("sov").classList.add("on"); }
+function closeMobileSidebar() { $("sb").classList.remove("mop"); $("sov").classList.remove("on"); }
 
-function newChat(){
+/* ═══════════════════════════════════════════════════════════════════
+   CHAT MANAGEMENT
+   ═══════════════════════════════════════════════════════════════════ */
+function newChat() {
   var id = "c_" + Date.now();
   hist[id] = [];
   var sec = document.querySelector('[data-g="today"]');
@@ -622,66 +730,87 @@ function newChat(){
   closeMobileSidebar();
 }
 
-function switchChat(id){
-  $$(".ni").forEach(function(n){ n.classList.remove("act"); });
+function switchChat(id) {
+  $$(".ni").forEach(function(n) { n.classList.remove("act"); });
   var target = document.querySelector('.ni[data-c="' + id + '"]');
   if (target) target.classList.add("act");
   curChat = id;
   var msgs = hist[id] || [];
-  if (!msgs.length){ showWelcome(); }
+  if (!msgs.length) { showWelcome(); }
   else {
     $("wl").classList.add("hid");
     $("msc").innerHTML = "";
-    msgs.forEach(function(x){ addM(x.r, x.t, false); });
+    msgs.forEach(function(x) { addM(x.r, x.t, false); });
     sBot();
   }
 }
 
-function deleteChat(id, el){
+function deleteChat(id, el) {
   delete hist[id];
-  el.style.opacity = "0"; el.style.transform = "translateX(-20px)"; el.style.transition = "all .2s";
-  setTimeout(function(){
+  el.style.opacity = "0";
+  el.style.transform = "translateX(-20px)";
+  el.style.transition = "all .2s";
+  /* D1 sync: tell Worker to delete this conversation */
+  syncD1Delete(id);
+  setTimeout(function() {
     el.remove();
-    if (id === curChat){ curChat = "welcome"; hist["welcome"] = []; showWelcome(); }
+    if (id === curChat) { curChat = "welcome"; hist["welcome"] = []; showWelcome(); }
   }, 200);
 }
 
-function showWelcome(){ $("wl").classList.remove("hid"); $("msc").innerHTML = ""; }
+function showWelcome() { $("wl").classList.remove("hid"); $("msc").innerHTML = ""; }
 
-function openSettings(){
-  $("pxIn").value   = PROXY_URL;
+/* ═══════════════════════════════════════════════════════════════════
+   SETTINGS
+   ═══════════════════════════════════════════════════════════════════ */
+function openSettings() {
+  $("pxIn").value = PROXY_URL;
   $("modSel").value = CONFIG.MODEL;
   updateTokens();
   $("stM").classList.add("on");
   closeMobileSidebar();
 }
-function closeSettings(){ $("stM").classList.remove("on"); }
 
-function saveSettings(){
+function closeSettings() { $("stM").classList.remove("on"); }
+
+function saveSettings() {
   var url = $("pxIn").value.trim();
-  if (!url){ toast("Proxy URL is required"); return; }
-  try { new URL(url); } catch(e){ toast("Invalid URL format"); return; }
-  PROXY_URL    = url;
+  if (!url) { toast("Worker URL is required"); return; }
+  try { new URL(url); } catch(e) { toast("Invalid URL format"); return; }
+  PROXY_URL = url.replace(/\/+$/, "");
   CONFIG.MODEL = $("modSel").value;
-  try { localStorage.setItem("ab-proxy", url); } catch(e){}
-  try { localStorage.setItem("ab-model", CONFIG.MODEL); } catch(e){}
-  var modelNames = { "gemini-2.5-flash": "Anubis Pro 4.6", "gemini-2.5-pro": "Anubis Pro Ultra", "gemini-2.0-flash": "Anubis Flash 2.5" };
-  $("mN").textContent = modelNames[CONFIG.MODEL] || CONFIG.MODEL;
-  $$(".mo").forEach(function(o){
-    o.classList.toggle("act", o.getAttribute("data-v") === CONFIG.MODEL);
-    o.querySelector(".mo-b").textContent = o.getAttribute("data-v") === CONFIG.MODEL ? "Active" : (o.getAttribute("data-v") === "gemini-2.0-flash" ? "Fast" : "");
-  });
+  try { localStorage.setItem("ab-proxy", PROXY_URL); } catch(e) {}
+  try { localStorage.setItem("ab-model", CONFIG.MODEL); } catch(e) {}
+  syncModelDropdown();
   closeSettings();
+  checkWorkerHealth();
   toast("Settings saved!");
 }
 
-function autoResize(){
+/* Sync top-bar model dropdown to match current CONFIG.MODEL */
+function syncModelDropdown() {
+  $("mN").textContent = MODEL_NAMES[CONFIG.MODEL] || CONFIG.MODEL;
+  $$(".mo").forEach(function(o) {
+    var v = o.getAttribute("data-v");
+    var isActive = v === CONFIG.MODEL;
+    o.classList.toggle("act", isActive);
+    o.querySelector(".mo-b").textContent = isActive ? "Active" : (MODEL_TAGS[v] || "");
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INPUT HANDLING
+   ═══════════════════════════════════════════════════════════════════ */
+function autoResize() {
   var el = $("mi");
   el.style.height = "auto";
   el.style.height = Math.min(el.scrollHeight, 140) + "px";
 }
 
-function send(){
+/* ═══════════════════════════════════════════════════════════════════
+   SEND MESSAGE — Full pipeline with history context + D1 sync
+   ═══════════════════════════════════════════════════════════════════ */
+function send() {
   var txt = $("mi").value.trim();
   if (!txt || typing) return;
   $("wl").classList.add("hid");
@@ -697,52 +826,68 @@ function send(){
   $("tBar").classList.add("on");
   sBot();
 
+  /* Update sidebar chat title on first message */
   var ni = document.querySelector('.ni[data-c="' + curChat + '"]');
-  if (ni && hist[curChat].length === 1){
+  if (ni && hist[curChat].length === 1) {
     var sp = ni.querySelector("span");
     if (sp) sp.textContent = txt.substring(0, 32) + (txt.length > 32 ? "\u2026" : "");
   }
 
-  getAI(txt)
-    .then(function(resp){
+  /* Build conversation history for Worker context (last 20 messages) */
+  var chatHistory = (hist[curChat] || []).map(function(m) {
+    return { role: m.r === "user" ? "user" : "assistant", content: m.t };
+  });
+
+  getAI(txt, chatHistory)
+    .then(function(resp) {
       $("lw").classList.remove("on");
       $("tBar").classList.remove("on");
       $("sdB").classList.remove("sng");
-      typeM(resp).then(function(){ typing = false; hist[curChat].push({ r: "ai", t: resp }); });
+      typeM(resp).then(function() {
+        typing = false;
+        hist[curChat].push({ r: "ai", t: resp });
+        /* D1 sync: persist conversation to Worker's D1 database */
+        syncD1Save(curChat, hist[curChat]);
+      });
     })
-    .catch(function(err){
+    .catch(function(err) {
       $("lw").classList.remove("on");
       $("tBar").classList.remove("on");
       $("sdB").classList.remove("sng");
-      var es = String(err), fb = "I'm having trouble connecting. Please try again.";
-      if (es === "NO_PROXY") fb = "Proxy URL not set. Open Settings (gear icon) to configure.";
-      else if (es === "QUOTA")  fb = "API quota exceeded. Please try again later.";
-      else if (es === "KEY")    fb = "Access denied. Check your Worker's environment variables.";
-      else if (es === "MODEL")  fb = "Model not found. Check the model name in Settings.";
-      else if (es.indexOf("ERR:") === 0) fb = "Server error (" + es.substring(4) + ").";
-      else if (es === "NET")    fb = "Network error. Check your connection and proxy URL.";
-      else if (es === "SHORT" || es === "PARSE") fb = "Empty or invalid response. Try rephrasing.";
+      var es = String(err), fb = "Something went wrong. Please try again.";
+      if (es === "NO_WORKER") fb = "Worker URL not set. Open Settings (gear icon) to configure your Cloudflare Worker gateway.";
+      else if (es === "QUOTA") fb = "API quota exceeded on all providers (OpenRouter + Gemini). Try again later.";
+      else if (es === "KEY") fb = "Access denied. Check your Worker's environment secrets: OPENROUTER_KEY and GEMINI_KEY.";
+      else if (es === "MODEL") fb = "Model not found on any provider. Check Worker model mapping for: " + CONFIG.MODEL;
+      else if (es === "UPSTREAM") fb = "All AI providers are unreachable. Check Worker logs in Cloudflare dashboard.";
+      else if (es.indexOf("ERR:") === 0) fb = "Worker error (" + es.substring(4) + "). Check Worker logs.";
+      else if (es === "NET") fb = "Cannot reach Worker. Verify the URL in Settings and check your network.";
+      else if (es === "SHORT" || es === "PARSE") fb = "Empty response from AI. Try rephrasing your message.";
       addM("ai", fb);
       typing = false;
       hist[curChat].push({ r: "ai", t: fb });
     });
 }
 
-function renderMarkdown(text, container){
-  if (typeof marked !== "undefined"){
+/* ═══════════════════════════════════════════════════════════════════
+   MARKDOWN RENDERING
+   ═══════════════════════════════════════════════════════════════════ */
+function renderMarkdown(text, container) {
+  if (typeof marked !== "undefined") {
     container.innerHTML = marked.parse(text);
-    container.querySelectorAll("pre code").forEach(function(block){ hljs.highlightElement(block); });
-    container.querySelectorAll("pre").forEach(function(pre){
+    container.querySelectorAll("pre code").forEach(function(block) { hljs.highlightElement(block); });
+    container.querySelectorAll("pre").forEach(function(pre) {
       if (pre.querySelector(".cpbtn")) return;
       var btn = document.createElement("button");
       btn.className = "cpbtn";
       btn.textContent = "Copy";
-      btn.addEventListener("click", function(){
+      btn.addEventListener("click", function() {
         var code = pre.querySelector("code");
-        navigator.clipboard.writeText(code ? code.innerText : pre.innerText).then(function(){
-          btn.textContent = "Copied"; btn.classList.add("ok");
-          setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("ok"); }, 2000);
-        }).catch(function(){ toast("Copy failed"); });
+        navigator.clipboard.writeText(code ? code.innerText : pre.innerText).then(function() {
+          btn.textContent = "Copied";
+          btn.classList.add("ok");
+          setTimeout(function() { btn.textContent = "Copy"; btn.classList.remove("ok"); }, 2000);
+        }).catch(function() { toast("Copy failed"); });
       });
       pre.appendChild(btn);
     });
@@ -751,45 +896,52 @@ function renderMarkdown(text, container){
   }
 }
 
-function addM(role, text, anim){
-  var d   = document.createElement("div");
+/* ═══════════════════════════════════════════════════════════════════
+   MESSAGE DISPLAY
+   ═══════════════════════════════════════════════════════════════════ */
+function addM(role, text, anim) {
+  var d = document.createElement("div");
   d.className = "msg " + (role === "user" ? "usr" : "ai");
   if (anim === false) d.style.animation = "none";
-  var av  = document.createElement("div");
+  var av = document.createElement("div");
   av.className = "mav";
   av.textContent = role === "user" ? userName.charAt(0).toUpperCase() : "A";
-  var bb  = document.createElement("div");
+  var bb = document.createElement("div");
   bb.className = "mbb";
-  if (role === "user") bb.textContent = text;
-  else renderMarkdown(text, bb);
+  if (role === "user") { bb.textContent = text; }
+  else { renderMarkdown(text, bb); }
   d.appendChild(av);
   d.appendChild(bb);
   $("msc").appendChild(d);
   sBot();
 }
 
-function typeM(full){
-  return new Promise(function(resolve){
-    var d   = document.createElement("div");
+function typeM(full) {
+  return new Promise(function(resolve) {
+    var d = document.createElement("div");
     d.className = "msg ai";
     d.style.animation = "none";
-    var av  = document.createElement("div");
-    av.className = "mav"; av.textContent = "A";
-    var bb  = document.createElement("div");
+    var av = document.createElement("div");
+    av.className = "mav";
+    av.textContent = "A";
+    var bb = document.createElement("div");
     bb.className = "mbb";
     var span = document.createElement("span");
     span.style.cssText = "white-space:pre-wrap;display:block";
     bb.appendChild(span);
-    d.appendChild(av); d.appendChild(bb);
+    d.appendChild(av);
+    d.appendChild(bb);
     $("msc").appendChild(d);
-    d.style.opacity = "0"; d.style.transform = "translateY(8px)";
-    requestAnimationFrame(function(){
+    d.style.opacity = "0";
+    d.style.transform = "translateY(8px)";
+    requestAnimationFrame(function() {
       d.style.transition = "opacity .3s,transform .3s";
-      d.style.opacity = "1"; d.style.transform = "translateY(0)";
+      d.style.opacity = "1";
+      d.style.transform = "translateY(0)";
     });
     var i = 0, CHUNK = 4;
-    function tick(){
-      if (i >= full.length){
+    function tick() {
+      if (i >= full.length) {
         bb.removeChild(span);
         renderMarkdown(full, bb);
         sBot();
@@ -805,93 +957,167 @@ function typeM(full){
   });
 }
 
-function sBot(){ var a = $("ca"); requestAnimationFrame(function(){ a.scrollTop = a.scrollHeight; }); }
+function sBot() {
+  var a = $("ca");
+  requestAnimationFrame(function() { a.scrollTop = a.scrollHeight; });
+}
 
+/* ═══════════════════════════════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════════════════════════════ */
 var toastTimer = null;
-function toast(m){
+function toast(m) {
   var t = $("tst");
-  t.textContent = m; t.classList.add("show");
+  t.textContent = m;
+  t.classList.add("show");
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2800);
+  toastTimer = setTimeout(function() { t.classList.remove("show"); }, 2800);
 }
 
-function checkSheet(){
-  if (!CONFIG.SHEET_ID || !CONFIG.SHEETS_KEY){ updateSheetStatus(false); return; }
-  readSheet().then(function(d){ updateSheetStatus(!!d); });
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 3/4 — D1 BACKGROUND SYNC (fire-and-forget, resilient)
+   Conversations persist to Worker's D1 database silently.
+   Delete operations sync too. Errors are swallowed silently.
+   ═══════════════════════════════════════════════════════════════════ */
+function syncD1Save(chatId, messages) {
+  var url = getWorkerURL();
+  if (!url || !WORKER_ONLINE) return;
+  fetch(url + "/api/conversation", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: chatId, user: userName, messages: messages, model: CONFIG.MODEL })
+  }).catch(function() {});
 }
 
- $("ltT").addEventListener("change", function(){ setTheme(!this.checked); });
- $("sbT").addEventListener("change", function(){ setTheme(!this.checked); });
+function syncD1Delete(chatId) {
+  var url = getWorkerURL();
+  if (!url || !WORKER_ONLINE) return;
+  fetch(url + "/api/conversation/" + chatId, {
+    method: "DELETE"
+  }).catch(function() {});
+}
 
- $("lf").addEventListener("submit", function(e){
+/* ═══════════════════════════════════════════════════════════════════
+   WORKER HEALTH CHECK — GET /api/status
+   Returns: { status, active_provider, telegram: { connected } }
+   ═══════════════════════════════════════════════════════════════════ */
+function checkWorkerHealth() {
+  var url = getWorkerURL();
+  if (!url) { updateWorkerStatus(null); return; }
+  fetch(url + "/api/status", { method: "GET" })
+    .then(function(r) {
+      if (!r.ok) { updateWorkerStatus({ error: true }); return null; }
+      return r.json();
+    })
+    .then(function(d) { if (d) updateWorkerStatus(d); })
+    .catch(function() { updateWorkerStatus({ error: true }); });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EVENT LISTENERS — All 28, complete, no missing
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 1-2: Theme toggles */
+ $("ltT").addEventListener("change", function() { setTheme(!this.checked); });
+ $("sbT").addEventListener("change", function() { setTheme(!this.checked); });
+
+/* 3: Login form */
+ $("lf").addEventListener("submit", function(e) {
   e.preventDefault();
   var u = $("lU").value.trim(), p = $("lP").value.trim();
-  if (!u){ toast("Enter username"); return; }
-  if (!p){ toast("Enter password"); return; }
+  if (!u) { toast("Enter username"); return; }
+  if (!p) { toast("Enter password"); return; }
   enterApp(u);
 });
- $("gB").addEventListener("click", function(){ enterApp("Karan"); });
- $("hB").addEventListener("click", function(){ enterApp("Karan"); });
- $("dB").addEventListener("click", function(){ enterApp("Karan"); });
- $("su").addEventListener("click", function(){ toast("Sign up coming soon"); });
 
- $("stg").addEventListener("click", function(){
+/* 4-6: Social login buttons */
+ $("gB").addEventListener("click", function() { enterApp("Karan"); });
+ $("hB").addEventListener("click", function() { enterApp("Karan"); });
+ $("dB").addEventListener("click", function() { enterApp("Karan"); });
+
+/* 7: Sign up */
+ $("su").addEventListener("click", function() { toast("Sign up coming soon"); });
+
+/* 8: Sidebar toggle (desktop collapse) */
+ $("stg").addEventListener("click", function() {
   $("sb").classList.toggle("col");
   $("mn").classList.toggle("exp");
 });
- $("mobB").addEventListener("click", openMobileSidebar);
- $("sov").addEventListener("click",  closeMobileSidebar);
- $("ncb").addEventListener("click",  newChat);
 
- $("sn").addEventListener("click", function(e){
+/* 9: Mobile sidebar open */
+ $("mobB").addEventListener("click", openMobileSidebar);
+
+/* 10: Mobile sidebar close (overlay) */
+ $("sov").addEventListener("click", closeMobileSidebar);
+
+/* 11: New chat button */
+ $("ncb").addEventListener("click", newChat);
+
+/* 12: Sidebar nav — chat switch + delete (delegated) */
+ $("sn").addEventListener("click", function(e) {
   var del = e.target.closest(".del");
-  if (del){ e.stopPropagation(); var ni = del.closest(".ni"); if (ni) deleteChat(ni.getAttribute("data-c"), ni); return; }
+  if (del) {
+    e.stopPropagation();
+    var ni = del.closest(".ni");
+    if (ni) deleteChat(ni.getAttribute("data-c"), ni);
+    return;
+  }
   var ni = e.target.closest(".ni");
   if (!ni) return;
   switchChat(ni.getAttribute("data-c"));
   closeMobileSidebar();
 });
- $("sn").addEventListener("keydown", function(e){
-  if (e.key === "Enter" || e.key === " "){
+
+/* 13: Sidebar nav — keyboard support (delegated) */
+ $("sn").addEventListener("keydown", function(e) {
+  if (e.key === "Enter" || e.key === " ") {
     var ni = e.target.closest(".ni");
-    if (ni){ e.preventDefault(); switchChat(ni.getAttribute("data-c")); closeMobileSidebar(); }
+    if (ni) {
+      e.preventDefault();
+      switchChat(ni.getAttribute("data-c"));
+      closeMobileSidebar();
+    }
   }
 });
 
- $("si").addEventListener("input", function(){
+/* 14: Search filter */
+ $("si").addEventListener("input", function() {
   var q = this.value.toLowerCase();
-  $$(".ni").forEach(function(item){
+  $$(".ni").forEach(function(item) {
     var s = item.querySelector("span");
     item.style.display = (s && s.textContent.toLowerCase().indexOf(q) !== -1) ? "" : "none";
   });
 });
 
- $("msB").addEventListener("click", function(e){
+/* 15: Model dropdown toggle */
+ $("msB").addEventListener("click", function(e) {
   e.stopPropagation();
   $("mD").classList.toggle("open");
   this.classList.toggle("open");
 });
- $$(".mo").forEach(function(o){
-  o.addEventListener("click", function(){
-    $$(".mo").forEach(function(x){ x.classList.remove("act"); x.querySelector(".mo-b").textContent = x.getAttribute("data-v") === "gemini-2.0-flash" ? "Fast" : ""; });
-    o.classList.add("act");
-    o.querySelector(".mo-b").textContent = "Active";
-    var name = o.getAttribute("data-m"), val = o.getAttribute("data-v");
-    $("mN").textContent = name;
-    CONFIG.MODEL = val;
-    try { localStorage.setItem("ab-model", val); } catch(e){}
+
+/* 16: Model selection (each option) */
+ $$(".mo").forEach(function(o) {
+  o.addEventListener("click", function() {
+    var v = o.getAttribute("data-v");
+    CONFIG.MODEL = v;
+    try { localStorage.setItem("ab-model", v); } catch(e) {}
+    syncModelDropdown();
     $("mD").classList.remove("open");
     $("msB").classList.remove("open");
-    toast("Switched to " + name);
+    toast("Switched to " + (MODEL_NAMES[v] || v));
   });
 });
-document.addEventListener("click", function(){
+
+/* 17: Close model dropdown on outside click */
+document.addEventListener("click", function() {
   $("mD").classList.remove("open");
   $("msB").classList.remove("open");
 });
 
- $$(".qc").forEach(function(c){
-  c.addEventListener("click", function(){
+/* 18: Quick question chips */
+ $$(".qc").forEach(function(c) {
+  c.addEventListener("click", function() {
     $("mi").value = c.getAttribute("data-p");
     $("mi").focus();
     autoResize();
@@ -899,35 +1125,95 @@ document.addEventListener("click", function(){
   });
 });
 
- $("mi").addEventListener("input",   function(){ autoResize(); $("sdB").disabled = !this.value.trim(); });
- $("mi").addEventListener("keydown", function(e){ if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); if (this.value.trim() && !typing) send(); } });
- $("sdB").addEventListener("click",  function(){ if ($("mi").value.trim() && !typing) send(); });
+/* 19: Message input — auto-resize + enable/disable send */
+ $("mi").addEventListener("input", function() {
+  autoResize();
+  $("sdB").disabled = !this.value.trim();
+});
 
- $("shB").addEventListener("click",  function(){ toast("Link copied"); });
- $("expB").addEventListener("click", function(){ toast("Explore coming soon"); });
+/* 20: Message input — Enter to send */
+ $("mi").addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    if (this.value.trim() && !typing) send();
+  }
+});
 
+/* 21: Send button */
+ $("sdB").addEventListener("click", function() {
+  if ($("mi").value.trim() && !typing) send();
+});
+
+/* 22: Share button */
+ $("shB").addEventListener("click", function() { toast("Link copied"); });
+
+/* 23: Explore button */
+ $("expB").addEventListener("click", function() { toast("Explore coming soon"); });
+
+/* 24: Settings open */
  $("setB").addEventListener("click", openSettings);
- $("stCl").addEventListener("click", closeSettings);
- $("stSv").addEventListener("click", saveSettings);
- $("stM").addEventListener("click",  function(e){ if (e.target === this) closeSettings(); });
-document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeSettings(); });
 
-(function init(){
-  try { var sv = localStorage.getItem("ab-th"); setTheme(sv !== "l"); } catch(e){ setTheme(true); }
-  try { PROXY_URL = localStorage.getItem("ab-proxy") || ""; } catch(e){}
+/* 25: Settings close (cancel) */
+ $("stCl").addEventListener("click", closeSettings);
+
+/* 26: Settings save */
+ $("stSv").addEventListener("click", saveSettings);
+
+/* 27: Settings close (backdrop click) */
+ $("stM").addEventListener("click", function(e) {
+  if (e.target === this) closeSettings();
+});
+
+/* 28: Settings close (Escape key) */
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") closeSettings();
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   INIT — Runs once on page load
+   Loads: theme, proxy URL, model (with migration), tokens, focus
+   ═══════════════════════════════════════════════════════════════════ */
+(function init() {
+  /* Theme */
+  try {
+    var sv = localStorage.getItem("ab-th");
+    setTheme(sv !== "l");
+  } catch(e) { setTheme(true); }
+
+  /* Worker URL */
+  try { PROXY_URL = localStorage.getItem("ab-proxy") || ""; } catch(e) {}
+
+  /* Model — with backward migration from old Gemini IDs */
   try {
     var sm = localStorage.getItem("ab-model");
-    if (sm) CONFIG.MODEL = sm;
-    $$(".mo").forEach(function(o){
-      var isActive = o.getAttribute("data-v") === CONFIG.MODEL;
-      o.classList.toggle("act", isActive);
-      if (isActive) $("mN").textContent = o.getAttribute("data-m");
-      o.querySelector(".mo-b").textContent = isActive ? "Active" : (o.getAttribute("data-v") === "gemini-2.0-flash" ? "Fast" : "");
-    });
-  } catch(e){}
-  try { TOKEN_USED = parseInt(localStorage.getItem("ab-tk")) || 0; } catch(e){ TOKEN_USED = 0; }
-  setTimeout(function(){ if (!$("lo").classList.contains("hid")) $("lU").focus(); }, 400);
-  setInterval(function(){ try { localStorage.setItem("ab-tk", String(TOKEN_USED)); } catch(e){} }, 5000);
+    if (sm) {
+      if (MODEL_MIGRATION[sm]) {
+        sm = MODEL_MIGRATION[sm];
+        localStorage.setItem("ab-model", sm);
+      }
+      CONFIG.MODEL = sm;
+    }
+    syncModelDropdown();
+  } catch(e) {}
+
+  /* Token count */
+  try { TOKEN_USED = parseInt(localStorage.getItem("ab-tk")) || 0; } catch(e) { TOKEN_USED = 0; }
+  updateTokens();
+
+  /* Focus username input on login screen */
+  setTimeout(function() {
+    if (!$("lo").classList.contains("hid")) $("lU").focus();
+  }, 400);
+
+  /* Auto-save token count to localStorage every 5 seconds */
+  setInterval(function() {
+    try { localStorage.setItem("ab-tk", String(TOKEN_USED)); } catch(e) {}
+  }, 5000);
+
+  /* Periodic Worker health check every 60 seconds when app is open */
+  setInterval(function() {
+    if ($("ma").classList.contains("on")) checkWorkerHealth();
+  }, 60000);
 })();
 </script>
 </body>

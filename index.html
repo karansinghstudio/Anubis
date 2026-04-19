@@ -2776,7 +2776,9 @@
             scrollBottom();
           }
         }
-      } catch (e) { console.error("Sync failed:", e); }
+      } catch (e) { 
+        console.warn("D1 Cloud Sync currently offline. Using local state."); 
+      }
     }
 
     function saveChats() {
@@ -3474,25 +3476,28 @@
     function enterApp(user) {
       userName = user;
       isAdmin = (user.toLowerCase() === ADMIN_USER);
-      $('gT').textContent = 'Hello, ' + user;
+      $('gT').textContent = 'Anubis v3.0';
       $('uaD').textContent = user.charAt(0).toUpperCase();
       $('unD').textContent = user;
-      $('admBtn').style.display = isAdmin ? 'flex' : 'none';
       $('lo').classList.add('hid');
       $('ma').classList.add('on');
+      
+      // Load UI components
       loadStorage();
       rebuildSidebar();
       renderTasks();
       updateTaskBadge();
       renderProjects();
-      syncModelUI();
+      
       if (curChat && chatStore[curChat]) {
         switchChat(curChat);
       } else {
         showWelcome();
       }
-      detectWorker();
-      logActivity(user + ' logged in' + (isAdmin ? ' (Admin)' : ''));
+      
+      // Async worker check - non blocking
+      setTimeout(detectWorker, 100);
+      logActivity(user + ' logged in');
     }
 
     /* ===== EVENT LISTENERS ===== */

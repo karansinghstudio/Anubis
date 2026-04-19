@@ -542,23 +542,68 @@
       display: block
     }
 
-    /* Sidebar */
+    #ma {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      background: var(--bg-p);
+      overflow: hidden
+    }
+
     #sb {
       width: var(--sb-w);
       background: var(--bg-s);
       border-right: 1px solid var(--bd);
       display: flex;
       flex-direction: column;
-      transition: width var(--dr) var(--ez), background var(--dr) var(--ez);
-      z-index: 200;
-      overflow: hidden;
-      flex-shrink: 0
+      flex-shrink: 0;
+      transition: width var(--dr) var(--ez)
     }
 
-    #sb.col {
-      width: var(--sb-c)
+    #mn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: var(--bg-p);
+      min-width: 0
     }
 
+    /* Activity Hub (3rd Panel) */
+    #act {
+      width: 300px;
+      background: var(--bg-s);
+      border-left: 1px solid var(--bd);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: width var(--dr) var(--ez)
+    }
+
+    .act-h {
+      padding: 16px;
+      border-bottom: 1px solid var(--bd);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ac);
+      text-transform: uppercase;
+      letter-spacing: 1px
+    }
+
+    .act-s {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px
+    }
+
+    @media(max-width: 1200px) {
+      #act {
+        display: none
+      }
+    }
+
+    /* Sidebar Fixes */
     .sh {
       display: flex;
       align-items: center;
@@ -1427,6 +1472,33 @@
       text-align: center;
       font-size: 10px;
       color: var(--t3)
+    }
+
+    .mbb {
+      max-width: 82%;
+      padding: 14px 18px;
+      border-radius: 20px;
+      line-height: 1.6;
+      font-size: 14.5px;
+      word-wrap: break-word;
+      position: relative;
+      animation: fu .3s var(--ez)
+    }
+
+    .mbb.ai {
+      background: var(--bg-s);
+      border: 1px solid var(--bd);
+      color: var(--t1);
+      border-bottom-left-radius: 4px;
+      align-self: flex-start
+    }
+
+    .mbb.user {
+      background: var(--ac);
+      color: #0b0b0b;
+      border-bottom-right-radius: 4px;
+      align-self: flex-end;
+      font-weight: 500
     }
 
     /* Loading */
@@ -2412,36 +2484,18 @@
     <div class="sov" id="sov"></div>
     <aside id="sb">
       <div class="sh">
-        <div class="logo"><span class="logo-i">A</span><span class="logo-t">Anubis</span></div>
+        <div class="logo"><span class="logo-i">A</span><span class="logo-t">Anubis v3.0</span></div>
         <button class="stg" id="stg"><i class="fas fa-bars"></i></button>
       </div>
-      <button class="nc" id="ncb"><i class="fas fa-plus"></i><span>New Chat</span></button>
-      <div class="ss"><i class="fas fa-search"></i><input type="text" placeholder="Search chats..." id="si"></div>
+      <button class="nc" id="ncb"><i class="fas fa-plus"></i><span>New Session</span></button>
+      <div class="ss"><i class="fas fa-search"></i><input type="text" placeholder="Search knowledge..." id="si"></div>
       <nav class="sn" id="sn"></nav>
       <div class="sft">
-        <button class="sf" id="projBtn"><i class="fas fa-building"></i><span>Projects</span></button>
-        <button class="sf" id="matBtn"><i class="fas fa-gem"></i><span>Materials</span></button>
-        <button class="sf" id="setBtn"><i class="fas fa-gear"></i><span>Settings</span></button>
-        <button class="sf" id="admBtn" style="display:none"><i
-            class="fas fa-shield-halved"></i><span>Dashboard</span></button>
-        <div class="sf" style="cursor:default">
-          <i class="fas fa-moon" id="tIc"></i>
-          <span style="flex:1;font-size:12px;color:var(--t2)">Theme</span>
-          <label class="tsw sm"><input type="checkbox" id="sbT">
-            <div class="tsw-tr">
-              <div class="tsw-cl"></div>
-              <div class="tsw-kn">
-                <div class="tsw-mn">
-                  <div class="tsw-dt"></div>
-                  <div class="tsw-dt"></div>
-                  <div class="tsw-dt"></div>
-                </div>
-              </div>
-            </div>
-          </label>
-        </div>
+        <button class="sf" id="projBtn"><i class="fas fa-building"></i><span>Infrastructure</span></button>
+        <button class="sf" id="matBtn"><i class="fas fa-gem"></i><span>Material BOQ</span></button>
+        <button class="sf" id="setBtn"><i class="fas fa-gear"></i><span>Configuration</span></button>
         <div class="up">
-          <div class="ua" id="uaD">K</div><span class="un" id="unD">User</span>
+          <div class="ua" id="uaD">PM</div><span class="un" id="unD">Project Manager</span>
         </div>
       </div>
     </aside>
@@ -2449,26 +2503,12 @@
       <header class="tb">
         <button class="mb" id="mobB"><i class="fas fa-bars"></i></button>
         <div class="modes" id="modes">
-          <button class="mp act" data-mode="ai"><i class="fas fa-brain"></i>AI</button>
-          <button class="mp" data-mode="task"><i class="fas fa-list-check"></i>TASK</button>
-          <button class="mp" data-mode="explore"><i class="fas fa-globe"></i>EXPLORE</button>
-        </div>
-        <div class="ms">
-          <button class="ms-b" id="msB"><span id="mN">Anubis Pro 4.6</span><i
-              class="fas fa-chevron-down ar"></i></button>
-          <div class="ms-d" id="mD">
-            <div class="mo act" data-v="anubis-pro-4.6"><span class="mo-n">Anubis Pro 4.6</span><span
-                class="mo-b">Active</span></div>
-            <div class="mo" data-v="anubis-pro-ultra"><span class="mo-n">Anubis Pro Ultra</span><span
-                class="mo-b">Powerful</span></div>
-            <div class="mo" data-v="anubis-flash-2.5"><span class="mo-n">Anubis Flash 2.5</span><span
-                class="mo-b">Fast</span></div>
-          </div>
+          <button class="mp act" data-mode="ai"><i class="fas fa-brain"></i>AI MODE</button>
+          <button class="mp" data-mode="task"><i class="fas fa-list-check"></i>ERP MODE</button>
+          <button class="mp" data-mode="explore"><i class="fas fa-globe"></i>EXPLORER</button>
         </div>
         <div class="ta">
-          <button class="ta-b" id="taskBtn" title="Tasks"><i class="fas fa-list-check"></i><span class="tbadge"
-              id="tbadge">0</span></button>
-          <button class="ta-b" id="expBtn" title="Export Chat"><i class="fas fa-download"></i></button>
+          <button class="ta-b" id="taskToggleBtn" title="Toggle Activity"><i class="fas fa-columns"></i></button>
         </div>
       </header>
       <div class="ca" id="ca">
@@ -2477,33 +2517,44 @@
         </div>
         <div class="wl" id="wl">
           <div class="wg"><span class="wg-i">A</span>
-            <h1 id="gT">Hello</h1>
-            <p>Construction & Interior Intelligence</p>
+            <h1 id="gT">Anubis v3.0</h1>
+            <p>Brilliant Project Intelligence</p>
           </div>
           <div class="qa">
-            <div class="qc" data-p="Create project: 3BHK full interior with modular kitchen and false ceiling"><i
-                class="fas fa-building"></i><span>Create Project</span></div>
-            <div class="qc" data-p="Show stone quantity data for R-24 building"><i class="fas fa-gem"></i><span>Material
-                Data</span></div>
+            <div class="qc" data-p="Check structural dependencies for Level 2"><i class="fas fa-link"></i><span>Structural Check</span></div>
+            <div class="qc" data-p="Fetch stone quantity BOQ for current project"><i class="fas fa-file-invoice"></i><span>Stone BOQ</span></div>
             <div class="qc" data-p="Show my pending tasks"><i class="fas fa-list-check"></i><span>My Tasks</span></div>
-            <div class="qc" data-p="What materials are needed for 2BHK flooring?"><i
-                class="fas fa-lightbulb"></i><span>Ask AI</span></div>
           </div>
         </div>
-        <div class="msc" id="msc"></div>
+        <div class="msc" id="msc">
+           <div class="mc" id="mc"></div>
+        </div>
         <div class="lw" id="lw">
-          <div class="spinner"><span></span><span></span><span></span><span></span></div><span
-            class="ll">Thinking...</span>
+          <div class="spinner"><span></span><span></span><span></span><span></span></div><span class="ll">Thinking...</span>
         </div>
       </div>
-      <div class="ia">
+      <div class="ia" id="ia">
         <div class="iw">
-          <textarea id="mi" placeholder="Message Anubis..." rows="1"></textarea>
+          <textarea id="mi" placeholder="Ask Anubis something..." rows="1"></textarea>
           <button class="snd" id="sdB" disabled><i class="fas fa-arrow-up"></i></button>
         </div>
-        <div class="ifoot">Anubis AI Platform — System Stable & Active</div>
+        <div class="ifoot">Anubis Intelligence v3.0 • Secure Infrastructure Parity</div>
       </div>
     </main>
+
+    <aside id="act">
+      <div class="act-h">Activity Hub</div>
+      <div class="act-s">
+        <div class="nlb">Active Tasks</div>
+        <div id="h-tasks" style="padding:10px 0">
+           <p style="font-size:12px;color:var(--t3);text-align:center">Fetching task state...</p>
+        </div>
+        <div class="nlb" style="margin-top:20px">Recent Materials</div>
+        <div id="h-mats" style="padding:10px 0">
+           <p style="font-size:12px;color:var(--t3);text-align:center">Initializing BOQ...</p>
+        </div>
+      </div>
+    </aside>
   </div>
 
   <!-- Task Panel -->
@@ -2675,7 +2726,8 @@
     /* Worker configuration */
     const API_BASE = "https://anubis-ai.romysingh84821.workers.dev";
     function detectWorker() {
-      // API_BASE is now hardcoded for production reliability
+      // API_BASE is hardcoded. Fetching remote state...
+      syncWithD1();
     }
 
     /* ===== DOM HELPERS ===== */
@@ -2702,15 +2754,29 @@
       try { curChat = localStorage.getItem(SK_CUR) || ''; } catch (e) { curChat = ''; }
       try { var m = localStorage.getItem(SK_MODEL); if (m && MODEL_NAMES[m]) CONFIG.MODEL = m; } catch (e) { }
       try { var th = localStorage.getItem(SK_THEME); if (th === 'l') setTheme(false); else setTheme(true); } catch (e) { setTheme(true); }
-      /* Ensure current chat exists */
-      if (!chatStore[curChat]) {
-        var keys = Object.keys(chatStore);
-        curChat = keys.length > 0 ? keys[keys.length - 1] : '';
-      }
-      /* Load draft */
-      try { $('mi').value = localStorage.getItem(SK_DRAFT) || ''; } catch (e) { }
+      
+      detectWorker(); // This now calls syncWithD1()
+      
       autoResize();
       updateSendBtn();
+    }
+
+    async function syncWithD1() {
+      try {
+        const res = await fetch(API_BASE + '/api/chat/history?userId=1&platform=web');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.history && data.history.length > 0) {
+            // Restore from D1 (State Parity)
+            $('msc').innerHTML = '';
+            $('wl').classList.add('hid');
+            data.history.forEach(m => {
+              addMsgToDOM(m.role === 'assistant' ? 'ai' : 'user', m.content, false);
+            });
+            scrollBottom();
+          }
+        }
+      } catch (e) { console.error("Sync failed:", e); }
     }
 
     function saveChats() {
@@ -3106,7 +3172,6 @@
       taskData = taskData.filter(function (t) { return t.id !== id; });
       saveTasks();
       renderTasks();
-      updateTaskBadge();
     }
 
     function renderTasks() {
@@ -3118,6 +3183,9 @@
         if (filter === 'completed') return t.completed;
         return true;
       });
+      
+      updateActivityHub(); // Sync with v3.0 Hub
+      
       if (filtered.length === 0) {
         list.innerHTML = '<div class="tp-empty"><i class="fas fa-clipboard-list"></i>No tasks</div>';
         $('tFt').textContent = '0 tasks';
@@ -3135,6 +3203,34 @@
       }
       var active = taskData.filter(function (t) { return !t.completed; }).length;
       $('tFt').textContent = active + ' active / ' + taskData.length + ' total';
+    }
+
+    /* v3.0 Panel Toggle */
+    if ($('taskToggleBtn')) {
+      $('taskToggleBtn').onclick = () => {
+        const act = $('act');
+        const isVisible = getComputedStyle(act).display !== 'none';
+        if (isVisible) act.style.display = 'none';
+        else act.style.display = 'flex';
+      };
+    }
+
+    async function updateActivityHub() {
+      try {
+        const res = await fetch(API_BASE + '/api/tasks?userId=1');
+        if (res.ok) {
+          const data = await res.json();
+          const list = $('h-tasks');
+          if (data.tasks && data.tasks.length > 0) {
+            list.innerHTML = data.tasks.slice(0, 5).map(t => `<div class="ni" style="font-size:11px;padding:6px 8px;cursor:default">
+              <i class="fas fa-${t.status === 'completed' ? 'check-circle' : 'circle'} fi" style="color:${t.status === 'completed' ? 'var(--green)' : 'var(--orange)'}"></i>
+              <span>${t.title}</span>
+            </div>`).join('');
+          } else {
+            list.innerHTML = `<p style="font-size:11px;color:var(--t3);text-align:center">No active tasks</p>`;
+          }
+        }
+      } catch (e) { /* Silently fail for hub sync */ }
     }
 
     function updateTaskBadge() {
